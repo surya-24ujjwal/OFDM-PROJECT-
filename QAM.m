@@ -5,9 +5,6 @@ close all;
 M = 16;
 SNRdB = 0:2:20;
 
-m = 2;
-Omega = 1;
-
 BER = zeros(size(SNRdB));
 
 for k = 1:length(SNRdB)
@@ -18,21 +15,12 @@ for k = 1:length(SNRdB)
         'gray',...
         'UnitAveragePower',true);
 
-    h = sqrt(gamrnd(m,Omega/m,length(tx),1));
+    h = (randn(length(tx),1) + ...
+         1j*randn(length(tx),1))/sqrt(2);
 
     fadedSignal = h .* tx;
 
-    signalPower = mean(abs(fadedSignal).^2);
-
-    snrLinear = 10^(SNRdB(k)/10);
-
-    noisePower = signalPower/snrLinear;
-
-    noise = sqrt(noisePower/2) .* ...
-           (randn(size(tx)) + ...
-            1j*randn(size(tx)));
-
-    rx = fadedSignal + noise;
+    rx = awgn(fadedSignal,SNRdB(k),'measured');
 
     rx = rx ./ h;
 
@@ -56,6 +44,6 @@ box on;
 xlabel('SNR (dB)');
 ylabel('Bit Error Rate (BER)');
 
-title('BER vs SNR for 16-QAM under Nakagami-m Channel');
+title('BER vs SNR for 16-QAM under Rayleigh Fading Channel');
 
 axis([0 20 1e-5 1]);

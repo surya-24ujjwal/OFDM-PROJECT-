@@ -5,36 +5,30 @@ close all;
 Nbits = 100000;
 SNRdB = 0:2:20;
 
-m = 2;
-Omega = 1;
-
 BER = zeros(size(SNRdB));
 
 for k = 1:length(SNRdB)
 
-    bits = randi([0 1],Nbits,1);
+    txBits = randi([0 1],Nbits,1);
 
-    txSignal = 2*bits - 1;
+    txSignal = 2*txBits - 1;
 
-    h = sqrt(gamrnd(m,Omega/m,Nbits,1));
+    h = (randn(Nbits,1) + 1j*randn(Nbits,1))/sqrt(2);
 
     fadedSignal = h .* txSignal;
 
     snrLinear = 10^(SNRdB(k)/10);
 
-    signalPower = mean(abs(fadedSignal).^2);
-
-    noisePower = signalPower/snrLinear;
-
-    noise = sqrt(noisePower/2)*randn(Nbits,1);
+    noise = sqrt(1/(2*snrLinear))*...
+           (randn(Nbits,1) + 1j*randn(Nbits,1));
 
     rxSignal = fadedSignal + noise;
 
     rxSignal = rxSignal ./ h;
 
-    rxBits = rxSignal > 0;
+    rxBits = real(rxSignal) > 0;
 
-    BER(k) = sum(bits~=rxBits)/Nbits;
+    BER(k) = sum(txBits ~= rxBits)/Nbits;
 
 end
 
@@ -50,6 +44,6 @@ box on;
 xlabel('SNR (dB)');
 ylabel('Bit Error Rate (BER)');
 
-title('BER vs SNR for BPSK under Nakagami-m Channel');
+title('BER vs SNR for BPSK under Rayleigh Fading Channel');
 
 axis([0 20 1e-5 1]);

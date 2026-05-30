@@ -5,9 +5,6 @@ close all;
 Nbits = 100000;
 SNRdB = 0:2:20;
 
-m = 2;
-Omega = 1;
-
 BER = zeros(size(SNRdB));
 
 for k = 1:length(SNRdB)
@@ -21,17 +18,14 @@ for k = 1:length(SNRdB)
 
     txSignal = (I + 1j*Q)/sqrt(2);
 
-    h = sqrt(gamrnd(m,Omega/m,length(txSignal),1));
+    h = (randn(length(txSignal),1) + ...
+         1j*randn(length(txSignal),1))/sqrt(2);
 
     fadedSignal = h .* txSignal;
 
     snrLinear = 10^(SNRdB(k)/10);
 
-    signalPower = mean(abs(fadedSignal).^2);
-
-    noisePower = signalPower/snrLinear;
-
-    noise = sqrt(noisePower/2) .* ...
+    noise = sqrt(1/(2*snrLinear))* ...
            (randn(size(txSignal)) + ...
             1j*randn(size(txSignal)));
 
@@ -44,7 +38,7 @@ for k = 1:length(SNRdB)
     rxBits(1:2:end) = real(rxSignal) > 0;
     rxBits(2:2:end) = imag(rxSignal) > 0;
 
-    BER(k) = sum(bits~=rxBits)/length(bits);
+    BER(k) = sum(bits ~= rxBits)/length(bits);
 
 end
 
@@ -60,6 +54,6 @@ box on;
 xlabel('SNR (dB)');
 ylabel('Bit Error Rate (BER)');
 
-title('BER vs SNR for QPSK under Nakagami-m Channel');
+title('BER vs SNR for QPSK under Rayleigh Fading Channel');
 
 axis([0 20 1e-5 1]);
