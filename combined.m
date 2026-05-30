@@ -2,8 +2,10 @@ clc;
 clear;
 close all;
 
-Nbits = 100000;
 SNRdB = 0:2:20;
+
+m = 2;
+Omega = 1;
 
 BER_BPSK = zeros(size(SNRdB));
 BER_QPSK = zeros(size(SNRdB));
@@ -11,27 +13,39 @@ BER_16QAM = zeros(size(SNRdB));
 
 %% BPSK
 
-for i = 1:length(SNRdB)
+Nbits = 100000;
 
-    txBits = randi([0 1],Nbits,1);
+for k = 1:length(SNRdB)
 
-    txSignal = 2*txBits - 1;
+    bits = randi([0 1],Nbits,1);
 
-    snrLinear = 10^(SNRdB(i)/10);
+    tx = 2*bits - 1;
 
-    noise = sqrt(1/(2*snrLinear))*randn(size(txSignal));
+    h = sqrt(gamrnd(m,Omega/m,Nbits,1));
 
-    rxSignal = txSignal + noise;
+    fadedSignal = h .* tx;
 
-    rxBits = rxSignal > 0;
+    snrLinear = 10^(SNRdB(k)/10);
 
-    BER_BPSK(i) = sum(txBits~=rxBits)/Nbits;
+    signalPower = mean(abs(fadedSignal).^2);
+
+    noisePower = signalPower/snrLinear;
+
+    noise = sqrt(noisePower/2)*randn(Nbits,1);
+
+    rx = fadedSignal + noise;
+
+    rx = rx ./ h;
+
+    rxBits = rx > 0;
+
+    BER_BPSK(k) = sum(bits~=rxBits)/Nbits;
 
 end
 
 %% QPSK
 
-for i = 1:length(SNRdB)
+for k = 1:length(SNRdB)
 
     bits = randi([0 1],Nbits,1);
 
@@ -40,32 +54,40 @@ for i = 1:length(SNRdB)
     I = 2*bits(1:2:end)-1;
     Q = 2*bits(2:2:end)-1;
 
-    txSignal = (I + 1j*Q)/sqrt(2);
+    tx = (I + 1j*Q)/sqrt(2);
 
-    snrLinear = 10^(SNRdB(i)/10);
+    h = sqrt(gamrnd(m,Omega/m,length(tx),1));
 
-    noise = sqrt(1/(2*snrLinear))*...
-           (randn(size(txSignal)) + ...
-            1j*randn(size(txSignal)));
+    fadedSignal = h .* tx;
 
-    rxSignal = txSignal + noise;
+    snrLinear = 10^(SNRdB(k)/10);
+
+    signalPower = mean(abs(fadedSignal).^2);
+
+    noisePower = signalPower/snrLinear;
+
+    noise = sqrt(noisePower/2) .* ...
+           (randn(size(tx)) + ...
+            1j*randn(size(tx)));
+
+    rx = fadedSignal + noise;
+
+    rx = rx ./ h;
 
     rxBits = zeros(length(bits),1);
 
-    rxBits(1:2:end) = real(rxSignal)>0;
-    rxBits(2:2:end) = imag(rxSignal)>0;
+    rxBits(1:2:end) = real(rx) > 0;
+    rxBits(2:2:end) = imag(rx) > 0;
 
-    BER_QPSK(i) = sum(bits~=rxBits)/length(bits);
+    BER_QPSK(k) = sum(bits~=rxBits)/length(bits);
 
 end
 
 %% 16-QAM
 
-%% 16-QAM
-
 M = 16;
 
-for i = 1:length(SNRdB)
+for k = 1:length(SNRdB)
 
     data = randi([0 M-1],100000,1);
 
@@ -73,15 +95,29 @@ for i = 1:length(SNRdB)
         'gray',...
         'UnitAveragePower',true);
 
-    rx = awgn(tx,SNRdB(i),'measured');
+    h = sqrt(gamrnd(m,Omega/m,length(tx),1));
+
+    fadedSignal = h .* tx;
+
+    signalPower = mean(abs(fadedSignal).^2);
+
+    snrLinear = 10^(SNRdB(k)/10);
+
+    noisePower = signalPower/snrLinear;
+
+    noise = sqrt(noisePower/2) .* ...
+           (randn(size(tx)) + ...
+            1j*randn(size(tx)));
+
+    rx = fadedSignal + noise;
+
+    rx = rx ./ h;
 
     rxData = qamdemod(rx,M,...
         'gray',...
         'UnitAveragePower',true);
 
-    [~,BER_16QAM(i)] = biterr(data,rxData);
-
-
+    [~,BER_16QAM(k)] = biterr(data,rxData);
 
 end
 
@@ -111,14 +147,14 @@ grid minor;
 box on;
 
 xlabel('SNR (dB)',...
-    'FontSize',13,...
-    'FontWeight','bold');
+       'FontSize',13,...
+       'FontWeight','bold');
 
 ylabel('Bit Error Rate (BER)',...
-    'FontSize',13,...
-    'FontWeight','bold');
+       'FontSize',13,...
+       'FontWeight','bold');
 
-title('BER Performance of BPSK, QPSK and 16-QAM over AWGN Channel',...
+title('BER Performance of BPSK, QPSK and 16-QAM over Nakagami-m Channel (m = 2)',...
       'FontSize',14,...
       'FontWeight','bold');
 
@@ -131,3 +167,6 @@ set(gca,'FontSize',12);
 
 axis([0 20 1e-5 1]);
 
+exportgraphics(gcf,...
+'Figure_5_3_Nakagami_Comparison.png',...
+'Resolution',300);

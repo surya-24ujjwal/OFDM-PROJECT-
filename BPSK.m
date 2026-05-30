@@ -5,39 +5,51 @@ close all;
 Nbits = 100000;
 SNRdB = 0:2:20;
 
+m = 2;
+Omega = 1;
+
 BER = zeros(size(SNRdB));
 
 for k = 1:length(SNRdB)
 
-    txBits = randi([0 1],Nbits,1);
+    bits = randi([0 1],Nbits,1);
 
-    txSignal = 2*txBits - 1;
+    txSignal = 2*bits - 1;
+
+    h = sqrt(gamrnd(m,Omega/m,Nbits,1));
+
+    fadedSignal = h .* txSignal;
 
     snrLinear = 10^(SNRdB(k)/10);
 
-    noise = sqrt(1/(2*snrLinear))*randn(Nbits,1);
+    signalPower = mean(abs(fadedSignal).^2);
 
-    rxSignal = txSignal + noise;
+    noisePower = signalPower/snrLinear;
+
+    noise = sqrt(noisePower/2)*randn(Nbits,1);
+
+    rxSignal = fadedSignal + noise;
+
+    rxSignal = rxSignal ./ h;
 
     rxBits = rxSignal > 0;
 
-    BER(k) = sum(txBits ~= rxBits)/Nbits;
+    BER(k) = sum(bits~=rxBits)/Nbits;
 
 end
 
 figure;
 
 semilogy(SNRdB,BER,'o-b',...
-    'LineWidth',2,...
-    'MarkerSize',8);
+         'LineWidth',2,...
+         'MarkerSize',8);
 
 grid on;
 box on;
 
-xlabel('SNR (dB)','FontSize',12);
-ylabel('Bit Error Rate (BER)','FontSize',12);
+xlabel('SNR (dB)');
+ylabel('Bit Error Rate (BER)');
 
-title('BER vs SNR for BPSK under AWGN Channel',...
-      'FontSize',13);
+title('BER vs SNR for BPSK under Nakagami-m Channel');
 
-set(gca,'FontSize',11);
+axis([0 20 1e-5 1]);

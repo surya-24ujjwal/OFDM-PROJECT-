@@ -5,6 +5,9 @@ close all;
 Nbits = 100000;
 SNRdB = 0:2:20;
 
+m = 2;
+Omega = 1;
+
 BER = zeros(size(SNRdB));
 
 for k = 1:length(SNRdB)
@@ -18,20 +21,30 @@ for k = 1:length(SNRdB)
 
     txSignal = (I + 1j*Q)/sqrt(2);
 
+    h = sqrt(gamrnd(m,Omega/m,length(txSignal),1));
+
+    fadedSignal = h .* txSignal;
+
     snrLinear = 10^(SNRdB(k)/10);
 
-    noise = sqrt(1/(2*snrLinear))*...
+    signalPower = mean(abs(fadedSignal).^2);
+
+    noisePower = signalPower/snrLinear;
+
+    noise = sqrt(noisePower/2) .* ...
            (randn(size(txSignal)) + ...
             1j*randn(size(txSignal)));
 
-    rxSignal = txSignal + noise;
+    rxSignal = fadedSignal + noise;
+
+    rxSignal = rxSignal ./ h;
 
     rxBits = zeros(length(bits),1);
 
     rxBits(1:2:end) = real(rxSignal) > 0;
     rxBits(2:2:end) = imag(rxSignal) > 0;
 
-    BER(k) = sum(bits ~= rxBits)/length(bits);
+    BER(k) = sum(bits~=rxBits)/length(bits);
 
 end
 
@@ -44,10 +57,9 @@ semilogy(SNRdB,BER,'s-r',...
 grid on;
 box on;
 
-xlabel('SNR (dB)','FontSize',12);
-ylabel('Bit Error Rate (BER)','FontSize',12);
+xlabel('SNR (dB)');
+ylabel('Bit Error Rate (BER)');
 
-title('BER vs SNR for QPSK under AWGN Channel',...
-      'FontSize',13);
+title('BER vs SNR for QPSK under Nakagami-m Channel');
 
-set(gca,'FontSize',11);
+axis([0 20 1e-5 1]);
